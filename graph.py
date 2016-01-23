@@ -10,6 +10,16 @@ import convert
 
 class Graph(object):
     def __init__(self, data=None, **attr):
+        # the init could be
+        # graph = Graph(g) where g is a Graph
+        # graph = Graph(e) where e is a Graph.e like
+        # graph = Graph(v,e) where v is Graph.v like and e is Graph.e like
+        # the rest of possible inits for data could be handled
+        # with classmethods like
+        # Graph.from_dict_of_dicts(dod)
+        # Graph.from_list_of_lists(lol)
+        # etc
+        # should abstract the data here
         self._nodedata = {}  # empty node attribute dict
         self._adjacency = {}  # empty adjacency dict
         self.data = {}   # dictionary for graph attributes
@@ -22,6 +32,7 @@ class Graph(object):
             convert.to_networkx_graph(data, create_using=self)
         # load graph attributes (must be after convert)
         self.data.update(attr)
+
 
     def s(self, nbunch):
         H = Subgraph(self, nbunch)

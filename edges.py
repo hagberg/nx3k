@@ -113,6 +113,9 @@ class Edges(BaseEdgeView):
                 del self._adj[v][u]
         except KeyError:
             raise NetworkXError("The edge %s-%s is not in the graph" % (u, v))
+    def clear(self):
+        for n in self._adj:
+            self._adj[n].clear()
 
 
 

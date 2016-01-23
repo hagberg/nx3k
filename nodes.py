@@ -108,7 +108,9 @@ class Nodes(object):
 #        return Degree(dict(d_iter()))
     def selfloops(self):
         return (n for n, nbrs in self._adj.items() if n in nbrs)
-
+    def clear(self):
+        self._nodes.clear()
+        self._adj.clear()
 
 class NodeKeys(KeysView):
     def __repr__(self):

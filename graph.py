@@ -41,8 +41,8 @@ class Graph(object):
 
     def clear(self):
         self.name = ''
-        self._adjacency.clear()
-        self._nodedata.clear()
+        self.n.clear()
+        self.e.clear()
         self.data.clear()
 
     def copy(self, with_data=True):

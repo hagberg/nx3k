@@ -54,9 +54,9 @@ class Graph(object):
     def copy(self, with_data=True):
         if with_data:
             return deepcopy(self)
-        G = nx.Graph()
-        G.add_nodes_from(self.n)
-        G.add_edges_from(self.e)
+        G = self.__class__()
+        G.n.update(self.n)
+        G.e.update(self.e)
         return G
 
     def is_multigraph(self):

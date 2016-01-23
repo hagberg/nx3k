@@ -1,8 +1,6 @@
 from __future__ import division
 from copy import deepcopy
 import networkx as nx
-from networkx.exception import NetworkXError
-import networkx.convert as convert
 
 from nodes import Nodes
 from edges import Edges

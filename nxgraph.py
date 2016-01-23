@@ -1,3 +1,11 @@
+# This file was derived from networkx/classes/graph.py
+# which is
+#    Copyright (C) 2004-2016 by
+#    Aric Hagberg <hagberg@lanl.gov>
+#    Dan Schult <dschult@colgate.edu>
+#    Pieter Swart <swart@lanl.gov>
+#    All rights reserved.
+#    BSD license.
 from __future__ import division
 from copy import deepcopy
 

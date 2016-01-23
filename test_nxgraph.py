@@ -1,3 +1,13 @@
+# This file was derived from networkx/classes/tests/test_graph.py
+# which is
+#    Copyright (C) 2004-2016 by
+#    Aric Hagberg <hagberg@lanl.gov>
+#    Dan Schult <dschult@colgate.edu>
+#    Pieter Swart <swart@lanl.gov>
+#    All rights reserved.
+#    BSD license.
+
+
 from nose.tools import (assert_equal, assert_raises, assert_true, raises,
                         assert_not_equal)
 import networkx

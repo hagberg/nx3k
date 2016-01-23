@@ -111,7 +111,7 @@ if __name__ == '__main__':
 #    print(graph.e & graph2.e)
     print(graph.e[(1,2)])
 
-    print "----"
+    print("----")
 
     graph.n[1]['a']='b'
     s = graph.s([1,2])

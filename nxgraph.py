@@ -28,10 +28,10 @@ class nxGraph(Graph):
     # keep these existing methods?
     @property
     def name(self):
-        return self.data.get('name', '')
+        return self.graph.get('name', '')
     @name.setter
     def name(self, s):
-        self.data['name'] = s
+        self.graph['name'] = s
     def __str__(self):
         return self.name
 
@@ -130,7 +130,7 @@ class nxGraph(Graph):
     # singleton degree implementation is ugly here
     def degree(self, nbunch=None, weight=None):
         if nbunch in self:
-            print "here"
+            print("here")
             (n,d) = next(self.n.degree(weight=weight))
             return d
         if nbunch is None:

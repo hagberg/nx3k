@@ -12,10 +12,10 @@ class Graph(object):
     def __init__(self, data=None, **attr):
         self._nodedata = {}  # empty node attribute dict
         self._adjacency = {}  # empty adjacency dict
+        self.data = {}   # dictionary for graph attributes
         self.n = Nodes(self._nodedata, self._adjacency)
         self.e = Edges(self._nodedata, self._adjacency)
         self.a = Adjacency(self._adjacency)
-        self.data = {}   # dictionary for graph attributes
         # attempt to load graph with data
         # would be nice to be able to do H = Graph(graph.n, graph.e)
         if data is not None:
@@ -24,7 +24,6 @@ class Graph(object):
         self.data.update(attr)
 
     def s(self, nbunch):
-#        bunch = set(self._nbunch_iter(nbunch))
         H = Subgraph(self, nbunch)
         return H
 
@@ -32,10 +31,10 @@ class Graph(object):
     def __call__(self, nbunch):
         return self.s(nbunch)
 
-
     # rewrite these in terms of new interface
     def __iter__(self):
         return iter(self.n)
+
     def __len__(self):
         return len(self.n)
 
@@ -71,8 +70,6 @@ class Graph(object):
         # integer. Otherwise, the sum of the weighted degrees is not
         # guaranteed to be an integer, so we perform "real" division.
         return s // 2 if weight is None else s / 2
-
-
 
 
 if __name__ == '__main__':

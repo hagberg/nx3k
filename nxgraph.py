@@ -109,7 +109,7 @@ class nxGraph(Graph):
             else:  # data is False
                 return self.e
         else:
-            bunch = set(self._nbunch_iter(nbunch))
+            bunch = set(self.nbunch_iter(nbunch))
             if data is True:
                 return ((u,v,d) for (u,v),d in self.e.items() if u in bunch or v in bunch)
             elif data is not False:

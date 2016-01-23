@@ -26,8 +26,8 @@ class Graph(object):
         self.data.update(attr)
 
     def s(self, nbunch):
-        bunch = set(self._nbunch_iter(nbunch))
-        H = Subgraph(self, bunch)
+#        bunch = set(self._nbunch_iter(nbunch))
+        H = Subgraph(self, nbunch)
         return H
 
     # crazy use of call - get subgraph?
@@ -74,32 +74,6 @@ class Graph(object):
         # guaranteed to be an integer, so we perform "real" division.
         return s // 2 if weight is None else s / 2
 
-    # not sure where this one goes - maybe to Subgraph
-    def _nbunch_iter(self, nbunch=None):
-        if nbunch is None:   # include all nodes via iterator
-            bunch = iter(self._adjacency)
-        elif nbunch in self:  # if nbunch is a single node
-            bunch = iter([nbunch])
-        else:                # if nbunch is a sequence of nodes
-            def bunch_iter(nlist, adj):
-                try:
-                    for n in nlist:
-                        if n in adj:
-                            yield n
-                except TypeError as e:
-                    message = e.args[0]
-                    # capture error for non-sequence/iterator nbunch.
-                    if 'iter' in message:
-                        raise NetworkXError(
-                            "nbunch is not a node or a sequence of nodes.")
-                    # capture error for unhashable node.
-                    elif 'hashable' in message:
-                        raise NetworkXError(
-                            "Node {} in the sequence nbunch is not a valid node.".format(n))
-                    else:
-                        raise
-            bunch = bunch_iter(nbunch, self._adjacency)
-        return bunch
 
 
 

@@ -40,10 +40,6 @@ class Graph(object):
         return iter(self.n)
     def __len__(self):
         return len(self.n)
-    def number_of_nodes(self):
-        return len(self.n)
-    def order(self): # deprecate?
-        return len(self.n)
 
     def clear(self):
         self.name = ''
@@ -67,21 +63,8 @@ class Graph(object):
         """Return True if graph is directed, False otherwise."""
         return False
 
-    def to_directed(self):
-        from networkx import DiGraph
-        G = DiGraph()
-        G.name = self.name
-        G.add_nodes_from(self.n)
-        G.add_edges_from(((u, v, deepcopy(data))
-            for u, nbrs in self.a
-            for v, data in nbrs.items()))
-        G.graph = deepcopy(self.data)
-        G._nodedata = deepcopy(self._nodedata)
-        G.node = G._nodedata # hack to pass test
-        return G
-
-    def to_undirected(self):
-        return deepcopy(self)
+    def order(self):
+        return len(self.n)
 
     def size(self, weight=None):
         s = sum(d for v, d in self.degree(weight=weight))
@@ -90,14 +73,6 @@ class Graph(object):
         # integer. Otherwise, the sum of the weighted degrees is not
         # guaranteed to be an integer, so we perform "real" division.
         return s // 2 if weight is None else s / 2
-
-    def number_of_edges(self, u=None, v=None):
-        if u is None:
-            return int(self.size())
-        if v in self.a[u]:
-            return 1
-        else:
-            return 0
 
     # not sure where this one goes - maybe to Subgraph
     def _nbunch_iter(self, nbunch=None):

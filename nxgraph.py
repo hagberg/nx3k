@@ -187,6 +187,36 @@ class nxGraph(Graph):
     def number_of_selfloops(self):
         return sum(1 for _ in self.e.selfloops())
 
+    def number_of_nodes(self):
+        return len(self.n)
+    def number_of_edges(self, u=None, v=None):
+        if u is None:
+            return int(self.size())
+        if v in self.a[u]:
+            return 1
+        else:
+            return 0
+
+
+    def to_undirected(self):
+        return deepcopy(self)
+
+
+    # make this digraph = DiGraph(graph)
+    def to_directed(self):
+        from networkx import DiGraph
+        G = DiGraph()
+        G.name = self.name
+        G.add_nodes_from(self.n)
+        G.add_edges_from(((u, v, deepcopy(data))
+            for u, nbrs in self.a
+            for v, data in nbrs.items()))
+        G.graph = deepcopy(self.data)
+        G._nodedata = deepcopy(self._nodedata)
+        G.node = G._nodedata # hack to pass test
+        return G
+
+
     # modify to # copy=True (old behavior) # copy=False (view)
     def subgraph(self, nbunch, copy=True):
         s = self.s(nbunch) # view

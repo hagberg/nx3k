@@ -28,10 +28,10 @@ class nxGraph(Graph):
     # keep these existing methods?
     @property
     def name(self):
-        return self.graph.get('name', '')
+        return self.data.get('name', '')
     @name.setter
     def name(self, s):
-        self.graph['name'] = s
+        self.data['name'] = s
     def __str__(self):
         return self.name
 

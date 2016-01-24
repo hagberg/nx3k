@@ -38,12 +38,21 @@ class EdgeData(UndirectedEdges):
             yield d
     def __repr__(self):
         return '{})'.format(list(self))
+    def __contains__(self, key):
+        # need to look at all data
+        for k in self:
+            if k == key:
+                return True
+        return False
 
 class EdgeItems(UndirectedEdges):
     def __iter__(self):
         return self._items()
     def __repr__(self):
         return '{})'.format(list(self))
+    def __contains__(self, key):
+        (u,v),d = key
+        return v in self._adj[u] and self._adj[u][v] == d
 
 
 class Edges(UndirectedEdges):

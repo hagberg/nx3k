@@ -12,25 +12,34 @@ class Graph(object):
     def __init__(self, data=None, **attr):
         # the init could be
         # graph = Graph(g) where g is a Graph
-        # graph = Graph(e) where e is a Graph.e like
-        # graph = Graph(v,e) where v is Graph.v like and e is Graph.e like
-        # the rest of possible inits for data could be handled
-        # with classmethods like
-        # Graph.from_dict_of_dicts(dod)
-        # Graph.from_list_of_lists(lol)
-        # etc
+        # graph = Graph((v,e)) where v is Graph.v like and e is Graph.e like
+        # graph = Graph(({},e)) for an edgelist with no specified nodes
+        # others with classmethods like
+        # Graph.from_adjacency_matrix(m)
+        # Graph.from_adjacency_list(l)
+        #
         # should abstract the data here
         self._nodedata = {}  # empty node attribute dict
         self._adjacency = {}  # empty adjacency dict
+        # the interface is n,e,a,data
+        self.n = Nodes(self._nodedata, self._adjacency) # rename to self.nodes
+        self.e = Edges(self._nodedata, self._adjacency) # rename to self.edges
+        self.a = Adjacency(self._adjacency) # rename to self.adjacency
         self.data = {}   # dictionary for graph attributes
-        self.n = Nodes(self._nodedata, self._adjacency)
-        self.e = Edges(self._nodedata, self._adjacency)
-        self.a = Adjacency(self._adjacency)
-        # attempt to load graph with data
-        # would be nice to be able to do H = Graph(graph.n, graph.e)
-        if data is not None:
-            convert.to_networkx_graph(data, create_using=self)
-        # load graph attributes (must be after convert)
+        # load with data
+        if hasattr(data,'n') and not hasattr(data,'name'): # it is a new graph
+            self.n.update(data.n)
+            self.e.update(data.e)
+            self.data.update(data.data)
+            data = None
+        try:
+            nodes,edges = data # containers of edges and nodes
+            self.n.update(nodes)
+            self.e.update(edges)
+        except: # old style
+            if data is not None:
+                convert.to_networkx_graph(data, create_using=self)
+        # load __init__ graph attribute keywords
         self.data.update(attr)
 
 
@@ -81,6 +90,51 @@ class Graph(object):
         # integer. Otherwise, the sum of the weighted degrees is not
         # guaranteed to be an integer, so we perform "real" division.
         return s // 2 if weight is None else s / 2
+
+    @classmethod
+    def from_adjacency_matrix(self, matrix):
+        import numpy as np
+        kind_to_python_type={'f':float,
+                             'i':int,
+                             'u':int,
+                             'b':bool,
+                             'c':complex,
+                             'S':str,
+                             'V':'void'}
+        try: # Python 3.x
+            blurb = chr(1245) # just to trigger the exception
+            kind_to_python_type['U']=str
+        except ValueError: # Python 2.6+
+            kind_to_python_type['U']=unicode
+        n,m=matrix.shape
+        if n!=m:
+            raise nx.NetworkXError("Adjacency matrix is not square.",
+                               "nx,ny=%s"%(matrix.shape,))
+        dt=matrix.dtype
+        try:
+            python_type=kind_to_python_type[dt.kind]
+        except:
+            raise TypeError("Unknown numpy data type: %s"%dt)
+
+        # Make sure we get even the isolated nodes of the graph.
+        nodes = range(n)
+        # Get a list of all the entries in the matrix with nonzero entries. These
+        # coordinates will become the edges in the graph.
+        edges = zip(*(np.asarray(matrix).nonzero()))
+        # handle numpy constructed data type
+        if python_type is 'void':
+        # Sort the fields by their offset, then by dtype, then by name.
+            fields = sorted((offset, dtype, name) for name, (dtype, offset) in
+                            matrix.dtype.fields.items())
+            triples = ((u, v, {name: kind_to_python_type[dtype.kind](val)
+                               for (_, dtype, name), val in zip(fields, matrix[u, v])})
+                       for u, v in edges)
+        else:  # basic data type
+            triples = ((u, v, dict(weight=python_type(matrix[u, v])))
+                       for u, v in edges)
+        graph = self((nodes, triples))
+        return graph
+
 
 
 if __name__ == '__main__':

@@ -57,12 +57,11 @@ class Nodes(MutableMapping):
         return self
     def symmetric_difference_update(self, nodes):
         # fixme: make work for node tuples?
-        discard = self & nodes
-        add = nodes - self
-        for n in discard:
-            self.discard(n)
-        for n in add:
-            self.add(n)
+        for n in nodes:
+            if n in self:
+                self.discard(n)
+            else:
+                self.add(n)
         return self
     def difference_update(self, nodes):
         # fixme: make work for node tuples?

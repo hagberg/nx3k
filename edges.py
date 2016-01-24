@@ -158,30 +158,3 @@ class EdgeItems(BaseEdgeView):
     def __contains__(self, key):
         (u,v),d = key
         return v in self._adj[u] and self._adj[u][v] == d
-
-class Subgraph(object):
-    __slots__ = ('_mapping','_nodes')
-    def __init__(self, mapping, nodes):
-        self._mapping = mapping
-        self._nodes = set(nodes)
-    def __iter__(self):
-        for n in self._nodes:
-            yield _mapping[n].items()
-    def __getitem__(self, key):
-        if key in self._nodes:
-            return self._mapping[key]
-        else:
-            raise KeyError
-
-    def __contains__(self, key):
-        return key in self._nodes
-    def __repr__(self):
-        return '{0.__class__.__name__}({1})'.format(self,list(self._nodes))
-    def __len__(self):
-        return len(self._nodes)
-    def keys(self):
-        return KeysView(self._nodes)
-    def values(self):
-        return ValuesView(dict((k,v) for (k,v) in self._mapping.items() if k in self._nodes))
-    def items(self):
-        return ItemsView(dict((k,v) for (k,v) in self._mapping.items() if k in self._nodes))

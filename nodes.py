@@ -13,18 +13,6 @@ class NodeItems(ItemsView):
     def __repr__(self):
         return '{}'.format(list(self._mapping.items()))
 
-
-# consider other mutable set methods?
-# s.update(t)   s |= t  return set s with elements added from t
-# s.intersection_update(t)      s &= t  return set s keeping only elements also found in t
-# s.difference_update(t)        s -= t  return set s after removing elements found in t
-# s.symmetric_difference_update(t)      s ^= t  return set s with elements from s or t but not both
-# s.add(x)              add element x to set s
-# s.remove(x)           remove x from set s; raises KeyError if not present
-# s.discard(x)          removes x from set s if present
-# s.pop()               remove and return an arbitrary element from s; raises KeyError if empty
-# s.clear()             remove all elements from set s
-
 class Nodes(MutableMapping):
     __slots__ = ('_nodes','_adj')
     def __init__(self, nodes, adj=None):

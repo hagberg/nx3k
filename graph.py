@@ -135,6 +135,11 @@ class Graph(object):
         graph = self((nodes, triples))
         return graph
 
+    @classmethod
+    def from_adjacency_list(self, adjlist):
+        nodes = range(len(adjlist))
+        edges = [(node,n) for node,nbrlist in enumerate(adjlist) for n in nbrlist]
+        return self((nodes,edges))
 
 
 if __name__ == '__main__':

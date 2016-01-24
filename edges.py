@@ -1,7 +1,8 @@
-from collections import MappingView,KeysView,ValuesView,ItemsView
+from collections import MappingView
 from networkx.exception import NetworkXError
 
-class BaseEdgeView(MappingView):
+
+class UndirectedEdges(object):
     __slots__ = ('_adj','_node')
     def __init__(self, node, adj):
         self._adj = adj
@@ -17,6 +18,35 @@ class BaseEdgeView(MappingView):
         del seen
     def __len__(self):
         return sum(len(nbrs) for n, nbrs in self._adj.items()) // 2
+    def _items(self):
+        seen = set()
+        nodes_nbrs = self._adj.items()
+        for n, nbrs in nodes_nbrs:
+            for nbr, ddict in nbrs.items():
+                if nbr not in seen:
+                    yield (n,nbr),ddict
+                    seen.add(n)
+        del seen
+
+class EdgeKeys(UndirectedEdges):
+    def __repr__(self):
+        return '{})'.format(list(self))
+
+class EdgeData(UndirectedEdges):
+    def __iter__(self):
+        for e,d in self._items():
+            yield d
+    def __repr__(self):
+        return '{})'.format(list(self))
+
+class EdgeItems(UndirectedEdges):
+    def __iter__(self):
+        return self._items()
+    def __repr__(self):
+        return '{})'.format(list(self))
+
+
+class Edges(UndirectedEdges):
     def __contains__(self, key):
         u,v = key
         return v in self._adj[u]
@@ -35,17 +65,13 @@ class BaseEdgeView(MappingView):
     def __sub__(self, other):
         return set(self) - set(other)
     def __repr__(self):
-        return '{}'.format(list(self))
-
-class Edges(BaseEdgeView):
-    def __repr__(self):
         return '{0.__class__.__name__}({1})'.format(self,list(self))
     def keys(self):
-        return EdgeKeys(self._adj)
+        return EdgeKeys(self._node, self._adj)
     def data(self):
-        return EdgeData(self._adj)
+        return EdgeData(self._node, self._adj)
     def items(self):
-        return EdgeItems(self._adj)
+        return EdgeItems(self._node, self._adj)
     def selfloops(self):
         return ((n, n)
                 for n, nbrs in self._adj.items() if n in nbrs)
@@ -116,45 +142,3 @@ class Edges(BaseEdgeView):
     def clear(self):
         for n in self._adj:
             self._adj[n].clear()
-
-
-
-class EdgeKeys(BaseEdgeView):
-    def __init__(self, adj):
-        self._adj = adj
-
-
-class EdgeData(BaseEdgeView):
-    def __init__(self, adj):
-        self._adj = adj
-    def __iter__(self):
-        seen = set()
-        nodes_nbrs = self._adj.items()
-        for n, nbrs in nodes_nbrs:
-            for nbr, ddict in nbrs.items():
-                if nbr not in seen:
-                    yield ddict
-                    seen.add(n)
-        del seen
-    def __contains__(self, key):
-        # need to look at all data
-        for k in self:
-            if k == key:
-                return True
-        return False
-
-class EdgeItems(BaseEdgeView):
-    def __init__(self, adj):
-        self._adj = adj
-    def __iter__(self):
-        seen = set()
-        nodes_nbrs = self._adj.items()
-        for n, nbrs in nodes_nbrs:
-            for nbr, ddict in nbrs.items():
-                if nbr not in seen:
-                    yield (n,nbr),ddict
-                    seen.add(n)
-        del seen
-    def __contains__(self, key):
-        (u,v),d = key
-        return v in self._adj[u] and self._adj[u][v] == d

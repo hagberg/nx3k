@@ -113,10 +113,11 @@ class DiEdges(BaseDiEdgeView):
     def remove(self, u, v):
         try:
             del self._succ[u][v]
-            if u != v:  # self-loop needs only one entry removed
-                del self._pred[v][u]
+            del self._pred[v][u]
         except KeyError:
-            raise NetworkXError("The edge %s-%s is not in the graph" % (u, v))
+            msg = "The edge %s-%s is not in the graph" % (u, v)
+            raise NetworkXError(msg)
+
     def clear(self):
         for n in self._succ:
             self._succ[n].clear()
@@ -141,8 +142,8 @@ class DiEdgeData(BaseDiEdgeView):  # out_edges... switch inputs for in_edges
                 yield ddict
     def __contains__(self, key):
         # need to look at all edges data dicts
-        for k in self:
-            if k == key:
+        for ddict in self:
+            if key in ddict:
                 return True
         return False
 
@@ -156,6 +157,13 @@ class DiEdgeItems(BaseDiEdgeView):
             for nbr, ddict in nbrs.items():
                 yield (n,nbr),ddict
     def __contains__(self, key):
-        (u,v),d = key
-        return v in self._succ[u] and self._succ[u][v] == d
+        try:
+            (u,v),d = key
+        except (TypeError, ValueError):
+            msg = "Valid EdgeItems have form ((u,v),d): {}".format(key)
+            raise NetworkXError(msg)
+        try:
+            return v in self._succ[u] and self._succ[u][v] == d
+        except KeyError:
+            return False
 

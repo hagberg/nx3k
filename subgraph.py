@@ -1,4 +1,5 @@
 from collections import MappingView,KeysView,ValuesView,ItemsView
+
 from nodes import Nodes
 from edges import Edges
 from adjacency import Adjacency
@@ -7,16 +8,22 @@ from adjacency import Adjacency
 class Subgraph(object):
 #    __slots__ = ('_nodedata','_adjacency','data')
     def __init__(self, graph, subnodes):
+        # TODO Can we replace nbunch_iter with set(subnodes) & set(graph)?
+        #      We lose the Error messages...
         self._subnodes = set(self._nbunch_iter(graph, subnodes))
-        self.data = graph.data
-        self._nodedata = SubNodeData(self._subnodes, graph._nodedata)
+        self._nodedata = SubNbrDict(self._subnodes, graph._nodedata)
         self._adjacency = SubAdjacency(self._subnodes, graph._adjacency)
-        self.test=self._adjacency
+        self.data = graph.data
         self.n = Nodes(self._nodedata, self._adjacency)
         self.e = Edges(self._nodedata, self._adjacency)
-        self.a = Adjacency(self._adjacency)
+        self.a = self._adjacency
     def __repr__(self):
         return '{0.__class__.__name__}({1})'.format(self,list(self._subnodes))
+    def __iter__(self):
+        return iter(self._subnodes)
+    def __len__(self):
+        return len(self._subnodes)
+
     @staticmethod
     def _nbunch_iter(graph, nbunch=None):
         if nbunch is None:   # include all nodes via iterator
@@ -46,41 +53,66 @@ class Subgraph(object):
 
 
 
-class SubNodeData(MappingView):
+class SubNbrDict(MappingView):
+    # __slots__= ["_nodes","_mapping","_cache"]
     def __init__(self, nodes, mapping):
-        self._nodes = nodes
+        # In nodes to be in subgraph, in mapping to be in nbrs.
+        # So need intersection of nodes with mapping...
+        self._nodes = set(nodes) & set(mapping)
         self._mapping = mapping
-    def __iter__(self):
-        for n in self._nodes:
-            yield n
-    def __getitem__(self, key):
-        if key in self._nodes:
-            return self._mapping[key]
-        else:
-            raise KeyError
-    def __contains__(self, key):
-        return key in self._nodes
+        self._cache = {}
     def __repr__(self):
-        return '{}'.format(self._nodes)
+        return '{0.__class__.__name__}({0._nodes}, {0._mapping})'.format(self)
+    def __iter__(self):
+        return iter(self._nodes)
+    def __getitem__(self, n):
+        if n in self._nodes:
+            # Datadicts are read/write so no wrapper for mapping[n]
+            return self._mapping[n]
+        raise KeyError
+    def __contains__(self, n):
+        return n in self._nodes
     def __len__(self):
         return len(self._nodes)
-    def keys(self):
-        return KeysView(self._nodes)
-    def items(self):
-        return dict((k,v) for (k,v) in self._mapping.items() if k in self._nodes
-).items()
 
-class SubAdjacency(SubNodeData):
+    def keys(self):
+        return self._nodes.keys()
+    def data(self):
+        # Datadicts are read/write so no wrapper for mapping[n]
+        for n in self._nodes - set(self._cache.keys()):
+            self._cache[n] = self._mapping[n]
+        return self._cache.values()
+    def items(self):
+        # Datadicts are read/write so no wrapper for mapping[n]
+        for n in self._nodes - set(self._cache.keys()):
+            self._cache[n] = self._mapping[n]
+        return self._cache.items()
+
+class SubAdjacency(SubNbrDict):
+    #__slots__ = ["_nodes","_mapping","_cache"]
     def __iter__(self):
         for n in self._nodes:
-            yield (n, SubNodeData(self._nodes, self._mapping[n]).items())
-    def __getitem__(self, key):
-        if key in self._nodes:
-            return SubNodeData(self._nodes, self._mapping[key])
-        else:
-            raise KeyError
-    def __repr__(self):
-       return '{}'.format(self.items())
+            if n in self._cache:
+                yield (n, self._cache[n])
+            else:
+                # NbrDicts are read-only so use wrapper for mapping[n]
+                self._cache[n] = nd = SubNbrDict(self._nodes, self._mapping[n])
+                yield (n, nd)
+    def __getitem__(self, n):
+        if n in self._cache:
+            return self._cache[n]
+        if n in self._nodes:
+            # NbrDicts are read-only so use wrapper for mapping[n]
+            self._cache[n] = nd = SubNbrDict(self._nodes, self._mapping[n])
+            return nd
+        raise KeyError
+    def data(self):
+        # NbrDicts are read-only so use wrapper for mapping[n]
+        for n in self._nodes - set(self._cache.keys()):
+            self._cache[n] = SubNbrDict(self._nodes, self._mapping[n])
+        return self._cache.values() # Not readonly datadict
     def items(self):
-        for n in self._nodes:
-            yield (n, dict(SubNodeData(self._nodes, self._mapping[n]).items()))
+        # NbrDicts are read-only so use wrapper for mapping[n]
+        for n in self._nodes - set(self._cache.keys()):
+            self._cache[n] = SubNbrDict(self._nodes, self._mapping[n])
+        return self._cache.items()

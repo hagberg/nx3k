@@ -84,7 +84,7 @@ class Graph(object):
         return len(self.n)
 
     def size(self, weight=None):
-        s = sum(d for v, d in self.degree(weight=weight))
+        s = sum(d for v, d in self.n.degree(weight=weight))
         # If `weight` is None, the sum of the degrees is guaranteed to be
         # even, so we can perform integer division and hence return an
         # integer. Otherwise, the sum of the weighted degrees is not

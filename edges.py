@@ -1,12 +1,51 @@
-from collections import MappingView
+from collections import MappingView, Set
 from networkx.exception import NetworkXError
 
 
+class BaseEdgeView(Set):
+    __slots__ = ["_edgesobj"]
+    def __init__(self, edgesobj):
+        self._edgesobj = edgesobj
+    def __repr__(self):
+        return '{0.__class__.__name__}({1})'.format(self,list(self))
+    def __len__(self):
+        return len(self._edgesobj)
+    # Set also demands __iter__ and __contains__ be defined. 
+
+class EdgeKeys(BaseEdgeView):
+    __slots__ = ["_edgesobj"]
+    def __iter__(self):
+        return iter(self._edgesobj)
+    def __contains__(self, key):
+        u,v = key
+        return v in self._edgesobj._adj[u]
+
+class EdgeData(BaseEdgeView):
+    __slots__ = ["_edgesobj"]
+    def __iter__(self):
+        for e,d in self._edgesobj._items():
+            yield d
+    def __contains__(self, data):
+        # Do we need/want to provide ability to look up a datadict?
+        # need to look at all data
+        for d in self:
+            if d == data:
+                return True
+        return False
+
+class EdgeItems(BaseEdgeView):
+    __slots__ = ["_edgesobj"]
+    def __iter__(self):
+        return self._edgesobj._items()
+    def __contains__(self, key):
+        adj = self._edgesobj._adj
+        (u,v),d = key
+        return v in adj[u] and adj[u][v] == d
+
+
 class UndirectedEdges(object):
-    __slots__ = ('_adj','_node')
-    def __init__(self, node, adj):
-        self._adj = adj
-        self._node = node
+    def __len__(self):
+        return sum(len(nbrs) for n, nbrs in self._adj.items()) // 2
     def __iter__(self):
         seen = set()
         nodes_nbrs = self._adj.items()
@@ -16,8 +55,6 @@ class UndirectedEdges(object):
                     yield (n, nbr)
                     seen.add(n)
         del seen
-    def __len__(self):
-        return sum(len(nbrs) for n, nbrs in self._adj.items()) // 2
     def _items(self):
         seen = set()
         nodes_nbrs = self._adj.items()
@@ -27,35 +64,6 @@ class UndirectedEdges(object):
                     yield (n,nbr),ddict
                     seen.add(n)
         del seen
-
-class EdgeKeys(UndirectedEdges):
-    def __repr__(self):
-        return '{})'.format(list(self))
-
-class EdgeData(UndirectedEdges):
-    def __iter__(self):
-        for e,d in self._items():
-            yield d
-    def __repr__(self):
-        return '{})'.format(list(self))
-    def __contains__(self, key):
-        # need to look at all data
-        for k in self:
-            if k == key:
-                return True
-        return False
-
-class EdgeItems(UndirectedEdges):
-    def __iter__(self):
-        return self._items()
-    def __repr__(self):
-        return '{})'.format(list(self))
-    def __contains__(self, key):
-        (u,v),d = key
-        return v in self._adj[u] and self._adj[u][v] == d
-
-
-class Edges(UndirectedEdges):
     def __contains__(self, key):
         u,v = key
         return v in self._adj[u]
@@ -65,26 +73,7 @@ class Edges(UndirectedEdges):
             return self._adj[u][v]
         except TypeError:
             raise NetworkXError('bad edge key: use edge key = (u,v)')
-    def __and__(self, other):
-        return set(self) & set(other)
-    def __or__(self, other):
-        return set(self) | set(other)
-    def __xor__(self, other):
-        return set(self) ^ set(other)
-    def __sub__(self, other):
-        return set(self) - set(other)
-    def __repr__(self):
-        return '{0.__class__.__name__}({1})'.format(self,list(self))
-    def keys(self):
-        return EdgeKeys(self._node, self._adj)
-    def data(self):
-        return EdgeData(self._node, self._adj)
-    def items(self):
-        return EdgeItems(self._node, self._adj)
-    def selfloops(self):
-        return ((n, n)
-                for n, nbrs in self._adj.items() if n in nbrs)
-
+    # Mutating Methods
     def add(self, u, v, attr_dict=None, **attr):
         if attr_dict is None:
             attr_dict = attr
@@ -106,8 +95,6 @@ class Edges(UndirectedEdges):
         datadict.update(attr_dict)
         self._adj[u][v] = datadict
         self._adj[v][u] = datadict
-
-
     def update(self, ebunch, attr_dict=None, **attr):
         # set up attribute dict
         if attr_dict is None:
@@ -140,7 +127,6 @@ class Edges(UndirectedEdges):
             datadict.update(dd)
             self._adj[u][v] = datadict
             self._adj[v][u] = datadict
-
     def remove(self, u, v):
         try:
             del self._adj[u][v]
@@ -151,3 +137,20 @@ class Edges(UndirectedEdges):
     def clear(self):
         for n in self._adj:
             self._adj[n].clear()
+
+class Edges(UndirectedEdges, Set):
+    __slots__ = ('_adj','_node')
+    def __init__(self, node, adj):
+        self._adj = adj
+        self._node = node
+    def __repr__(self):
+        return '{0.__class__.__name__}({1})'.format(self,list(self))
+    def keys(self):
+        return EdgeKeys(self)
+    def data(self):
+        return EdgeData(self)
+    def items(self):
+        return EdgeItems(self)
+    def selfloops(self):
+        return ((n, n)
+                for n, nbrs in self._adj.items() if n in nbrs)

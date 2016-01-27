@@ -3,6 +3,8 @@ from networkx.exception import NetworkXError
 
 class NodeKeys(KeysView):
     def __repr__(self):
+        # If we remove this def, the result is:
+        # return '{0.__class__.__name__}({1})'.format(self,self._mapping)
         return '{}'.format(list(self._mapping))
 
 class NodeData(ValuesView):
@@ -25,7 +27,7 @@ class Nodes(MutableMapping):
     def __contains__(self, key):
         return key in self._nodes
     def __repr__(self):
-        return '{0.__class__.__name__}({1})'.format(self,list(self._nodes))
+        return '{0.__class__.__name__}({1})'.format(self,self._nodes)
     def __len__(self):
         return len(self._nodes)
     def clear(self):
@@ -40,6 +42,16 @@ class Nodes(MutableMapping):
         return set(self._nodes) ^ set(other)
     def __sub__(self, other):
         return set(self._nodes) - set(other)
+    # reverse set methods (so set | me works same as me | set)
+    def __rand__(self, other):
+        return set(self._nodes) & set(other)
+    def __ror__(self, other):
+        return set(self._nodes) | set(other)
+    def __rxor__(self, other):
+        return set(self._nodes) ^ set(other)
+    def __rsub__(self, other):
+        return set(self._nodes) - set(other)
+    # inplace mass adds and removes
     def update(self, nodes, **attr):
         for n in nodes:
             try:
@@ -51,12 +63,10 @@ class Nodes(MutableMapping):
                 self.add(n, attr_dict=None, **attr)
         return self
     def intersection_update(self, nodes):
-        # fixme: make work for node tuples?
-        for n in self - nodes:
+        for n in self - set(nodes):
             self.discard(n)
         return self
     def symmetric_difference_update(self, nodes):
-        # fixme: make work for node tuples?
         for n in nodes:
             if n in self:
                 self.discard(n)
@@ -64,7 +74,6 @@ class Nodes(MutableMapping):
                 self.add(n)
         return self
     def difference_update(self, nodes):
-        # fixme: make work for node tuples?
         for n in nodes:
             self.discard(n)
         return self
@@ -77,10 +86,10 @@ class Nodes(MutableMapping):
     def discard(self, n):
         adj = self._adj
         try:
-            # keys handles self-loops (allow mutation later)
+            # list handles self-loops (allow mutation later)
             nbrs = list(adj[n].keys())
             del self._nodes[n]
-        except KeyError:  # NetworkXError if n not in self
+        except KeyError:  # silently ignore if n not in self
             return
         for u in nbrs:
             del adj[u][n]   # remove all edges n-u in graph

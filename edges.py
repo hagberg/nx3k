@@ -53,7 +53,7 @@ class UndirectedEdges(object):
             for nbr in nbrs:
                 if nbr not in seen:
                     yield (n, nbr)
-                    seen.add(n)
+            seen.add(n)
         del seen
     def _items(self):
         seen = set()
@@ -62,7 +62,7 @@ class UndirectedEdges(object):
             for nbr, ddict in nbrs.items():
                 if nbr not in seen:
                     yield (n,nbr),ddict
-                    seen.add(n)
+            seen.add(n)
         del seen
     def __contains__(self, key):
         u,v = key

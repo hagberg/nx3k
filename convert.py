@@ -110,6 +110,15 @@ def to_networkx_graph(data,create_using=None,multigraph_input=False):
 #    except:
 #        raise nx.NetworkXError("Input is not a correct NetworkX graph.")
 
+    if hasattr(data, "_nodes"):
+        result= from_dict_of_dicts(data.a,\
+                create_using=create_using,\
+                multigraph_input=data.is_multigraph())
+        if hasattr(data,'data'): # data.graph should be dict-like
+            result.data.update(data.data)
+        if hasattr(data,'_nodes'): # data.node should be dict-of-dict-like
+            result._nodes.update( (n,dd.copy()) for n,dd in data.n.items() )
+        return result
 
     # pygraphviz  agraph
     if hasattr(data,"is_strict"):

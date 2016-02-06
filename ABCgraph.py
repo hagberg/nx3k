@@ -1,4 +1,7 @@
 from collections import Mapping, KeysView, ItemsView, MutableSet
+from networkx import NetworkXError
+import convert
+from copy import deepcopy
 
 # Notes to help me remember what the ABC classes provide:
 # classname | abstract methods -> concrete methods
@@ -44,7 +47,7 @@ class Nodes(ABCSetMap, MutableSet):
     def data(self, weight):
         return DataView(self._mapping, weight)
     def selfloops(self):
-        return (n for n, nbrs in self._succ.items() if n in nbrs)
+        return (n for n, nbrs in self._graph._succ.items() if n in nbrs)
     # Mutating Methods
     def add(self, n, attr_dict=None, **attr):
         if attr_dict is None:
@@ -88,7 +91,8 @@ class Nodes(ABCSetMap, MutableSet):
             except TypeError:
                 self.add(n, attr_dict=None, **attr)
     def clear(self):
-        self._graph.e.clear()
+        self._graph._succ.clear()
+        self._graph._pred.clear()
         self._mapping.clear()
 
 # Edges
@@ -123,7 +127,7 @@ class Edges(ABCSetMap, MutableSet):
     def data(self, weight):
         return DataView(self, weight)
     def selfloops(self):
-        return ((n, n) for n, nbrs in self._succ.items() if n in nbrs)
+        return ((n, n) for n, nbrs in self._graph._succ.items() if n in nbrs)
 
     # Mutating Methods
     def _add_edge(self, u, v, attr_dict):
@@ -187,21 +191,21 @@ class Edges(ABCSetMap, MutableSet):
             ne = len(e)
             if ne == 3:
                 u, v, dd = e
-                dd = dd.copy()
             elif ne == 2:
                 u, v = e
                 try:
                     {v} # is v hashable, i.e. a datadict?
                 except TypeError:
-                    dd = v.copy()
+                    dd = v
                     u,v = u
                 else:
                     dd = {}  # doesnt need edge_attr_dict_factory
             else:
                 msg = "Edge tuple %s must be a 2-tuple or 3-tuple." % (e,)
                 raise NetworkXError(msg)
-            dd.update(attr_dict)
-            self._add_edge(u, v, dd)
+            datadict = attr_dict.copy()
+            datadict.update(dd)
+            self._add_edge(u, v, datadict)
 
     def discard(self, ekeys):
         try:
@@ -255,13 +259,15 @@ class UnionNbrs(Mapping):
         # keys in both resolve to _mapping but count twice in len
         self._mapping = snbrs
         self._pnbrs = pnbrs
-        assert set(snbrs.keys()) & set(pnbrs.keys()) < {node}
+        assert set(snbrs.keys()) & set(pnbrs.keys()) <= {node}
     def __getitem__(self, key):
         if key in self._mapping:
             return self._mapping[key]
         return self._pnbrs[key]
     def __iter__(self):
-        for n in set(self._mapping) | set(self._pnbrs):
+        for n in self._mapping:
+            yield n
+        for n in self._pnbrs:
             yield n
     def __len__(self):
         # Note: self-loops make this violate the invariant
@@ -278,6 +284,7 @@ class AtlasUnion(ABCSetMap):
     def __getitem__(self, key):
         if key in self._mapping:
             return UnionNbrs(self._mapping[key], self._pnbrs[key], key)
+        raise KeyError(key)
 
 
 
@@ -291,7 +298,6 @@ class Graph(ABCSetMap):
         self._succ = succ = {}  # fixme factory
         self._pred = pred = {}  # fixme factory
         self._directed = attr.pop("directed", False)
-        self.data = {}
         # Interface
         self.n = Nodes(self)
         self.e = Edges(self)
@@ -302,12 +308,38 @@ class Graph(ABCSetMap):
         else:
             self.su = self.a
             self.pr = self.a
+        # graph data attributes
+        self.data = attr
+        # Handle input
+        if data is None:
+            return
+        if hasattr(data, "_nodes"):
+            # new datadicts but with same info (containers in datadicts same)
+            self.data.update(data.data)
+            for n in data.n:
+                self.n.update(data.n.items())
+            self.e.update(data.e.items())
+        elif len(data) == 2:
+            try:
+                V,E = data
+                self.n.update(V)
+                self.e.update(E)
+            except:  # something else
+                d=self.data.copy()
+                convert.to_networkx_graph(data, create_using=self)
+                self.data.update(d)
+        else:
+            msg = ("Graph argument must be a graph "
+                   "or (V, E)-tuple of nodes and edges.")
+            raise NetworkXError(msg)
     
+    def __repr__(self):
+        return '{0.__class__.__name__}({1}, {2})'.format(self, list(self.n), list(self.e))
+
     def s(self, nbunch):
         return Subgraph(self, nbunch)
     def clear(self):
         self.n.clear()
-        self.e.clear()
         self.data.clear()
     def copy(self, with_data=True):
         if with_data:
@@ -317,9 +349,10 @@ class Graph(ABCSetMap):
     def directed(self):
         return self._directed
 
-    def size(self):
-        # TODO: weighted
-        s = sum(len(nbrs) for n, nbrs in self._succ.items())
+    def size(self, weight=None):
+        if weight is None:
+            return len(self.e)
+        return sum(wt for wt in self.e.data(weight).values())
 
 
 # Subgraph
@@ -332,17 +365,19 @@ class SubDict(Mapping):
     def __getitem__(self, key):
         if key in self._subkey:
             return self._mapping[key]
+        raise KeyError(key)
     def __iter__(self):
         return iter(self._subkey)
     def __len__(self):
         return len(self._subkey)
     def __repr__(self):
-        return '{0.__class__.__name__}({1})'.format(self, list(self))
+        return '{0.__class__.__name__}({1}, {2})'.format(self, list(self._subkey), list(self._mapping))
 
 class SubDictOfDict(SubDict):
     def __getitem__(self, key):
         if key in self._subkey:
             return SubDict(self._subkey, self._mapping[key])
+        raise KeyError(key)
 
 class Subgraph(Graph):
     def __init__(self, graph, subnodes):
@@ -368,35 +403,29 @@ class Subgraph(Graph):
 # ======
 
 def in_degree(G, weight=None):
-    if weight is None:
-        return DegreeView(G.pr)
-    return WeightedDegreeView(G.pr, weight)
+    return DegreeView(G.pr, weight)
 
 def out_degree(G, weight=None):
-    if weight is None:
-        return DegreeView(G.su)
-    return WeightedDegreeView(G.su, weight)
+    return DegreeView(G.su, weight)
 
 def degree(G, weight=None):
-    if weight is None:
-        return DegreeView(G.a)
-    return WeightedDegreeView(G.a, weight)
+    return DegreeView(G.a, weight)
 
 class DegreeView(ItemsView):
-    def __init__(self, mapping):
+    def __init__(self, mapping, weight):
         self._mapping = mapping
+        if weight is None:
+            self._compute_degree = len
+        elif isinstance(weight, str):
+            self._compute_degree = lambda nbrs: \
+                    sum((nbrs[nbr].get(weight, 1) for nbr in nbrs))
+        else:
+            self._compute_degree = weight
     def __getitem__(self, key):
-        return len(self._mapping[key])
+        return self._compute_degree(self._mapping[key])
     def __iter__(self):
         for key, nbrs in self._mapping:
-            yield key, len(nbrs)
-    def data(self, weight):
-        return WeightedDegreeView(self, weight)
-
-class WeightedDegreeView(DataView):
-    def _wrap_value(self, key):
-        nbrs = self._mapping[key]
-        return sum((nbrs[nbr].get(self.weight, 1) for nbr in nbrs))
+            yield key, self._compute_degree(nbrs)
 
 
 # Some Testing

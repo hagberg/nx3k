@@ -131,15 +131,13 @@ class DodGraphData(ABCGraphData):
                 if nbr != node:
                     yield nbr,dd
     def out_degree(self, node):
-        if self._directed:
-            return len(self._succ[node])
-        return (len(self._succ[node]) + len(self._pred[node]))/2
+        return len(self._succ[node])
     def in_degree(self, node):
-        if self._directed:
-            return len(self._pred[node])
-        return (len(self._succ[node]) + len(self._pred[node]))/2
+        return len(self._pred[node])
     def degree(self, node):
-        return len(self._succ[node]) + len(self._pred[node])
+        if self._directed:
+            return len(self._succ[node]) + len(self._pred[node])
+        return len(self._succ[node])
     def order(self):
         return len(self._nodes)
 

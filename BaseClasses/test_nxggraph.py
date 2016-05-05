@@ -96,6 +96,7 @@ if __name__ == '__main__':
 
     #print(graph.edges)
     assert(sorted(graph.edges) == [(1, 2), (2, 3), (3, 4), (4, 5)])
+    #print(len(graph.edges))
     assert(len(graph.edges) == 4)
     #print(graph.edges.data())
     assert(sorted(graph.edges.data()) == [

@@ -23,8 +23,6 @@ class nxGraph(Graph):
         # DEPRECATE
         self.edge = self.adj
 
-
-
     # keep these existing methods?
     @property
     def name(self):
@@ -34,7 +32,6 @@ class nxGraph(Graph):
         self.data['name'] = s
     def __str__(self):
         return self.name
-
 
     # deprecate? - replace with for n in Graph.nodes?
     def __contains__(self, n):
@@ -124,7 +121,6 @@ class nxGraph(Graph):
         except KeyError:
             raise NetworkXError("The node %s is not in the graph." % (n,))
 
-
     # deprecate - use G.n.degree(), G.s(nbunch).degree
     # what do we do about singleton?
     # singleton degree implementation is ugly here
@@ -138,9 +134,6 @@ class nxGraph(Graph):
         else:
             return ((n,d) for (n,d) in self.n.degree(weight=weight) if n in nbunch)
 
-
-
-
     # FIXME deprecate - use G.e.remove()
     def remove_edge(self, u, v):
         self.e.remove(u,v)
@@ -153,7 +146,6 @@ class nxGraph(Graph):
                 self.e.remove(u,v)
             except NetworkXError: # shouldn't silently error here
                 pass
-
 
     # deprecate - use (u,v) in self.e
     def has_edge(self, u, v):
@@ -197,10 +189,8 @@ class nxGraph(Graph):
         else:
             return 0
 
-
     def to_undirected(self):
         return deepcopy(self)
-
 
     # make this digraph = DiGraph(graph)
     def to_directed(self):
@@ -215,7 +205,6 @@ class nxGraph(Graph):
         G._nodedata = deepcopy(self._nodedata)
         G.node = G._nodedata # hack to pass test
         return G
-
 
     # modify to # copy=True (old behavior) # copy=False (view)
     def subgraph(self, nbunch, copy=True):

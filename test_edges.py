@@ -3,7 +3,7 @@
 #
 from nose.tools import assert_true, assert_equal, assert_raises
 
-from mixedges import Edges, EdgeKeys, EdgeData, EdgeItems
+from edges import Edges, EdgeKeys, EdgeData, EdgeItems
 
 class BaseEdgeTests(object):
     def setup_edges(self):
@@ -25,9 +25,6 @@ class BaseEdgeTests(object):
             ans = [((0,1),ed1), ((0,0),ed2), ((1,0),ed3), ((2,3),ed4)]
         else:
             ans = [((0,1),ed3), ((0,0),ed2), ((2,3),ed4)]
-        print("succ:",Ge._succ)
-        print("pred:",Ge._pred)
-        print("items",list(Ge._items()))
         assert_equal( sorted(Ge._items()), sorted(ans))
     def test_view_data_keys(self):
         Ge = self.Ge
@@ -72,8 +69,8 @@ class BaseEdgeTests(object):
             assert_true((3,2) not in Ge)
         else:
             assert_true((3,2) in Ge)
-        assert_true((4,5) not in Ge)
-        assert_true((4,4) not in Ge)
+        assert_true((4, 5) not in Ge)
+        assert_true((4, 4) not in Ge)
         # getitem
         assert_true(Ge[(0,1)] == (ed1 if Ge.directed else ed3))
         assert_true(Ge[(1,0)] == ed3)
@@ -110,7 +107,7 @@ class TestDiEdges(BaseEdgeTests):
         node ={4:{}}
         succ = {}
         pred = {}
-        self.Ge = Edges(node, succ, pred, directed=False)
+        self.Ge = Edges(node, succ, pred, directed=True)
         self.setup_edges()
 class TestUndiEdges(BaseEdgeTests):
     def setUp(self):

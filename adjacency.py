@@ -1,62 +1,114 @@
-from collections import MappingView
+from collections import Mapping, KeysView, ValuesView, ItemsView, Set
 
-class NbrDict(MappingView):
-    __slots__ = ["_mapping"]
-    # We can return _mapping[n] without wrapper. datadict is read-write
-    def __repr__(self):
-        return '{0.__class__.__name__}({0._mapping})'.format(self)
+# no ABC has repr so we should provide it
+# Mapping -> getitem, len, iter
+# MutableMapping -> setitem, delitem, getitem, len, iter
+#
+# MappingView takes a dict as input, stores it as self._mapping
+#     and creats a read-only interface.
+# KeyView and friends add Set operations acting on the output of iter
+#     to make that work they redefine @classmethod _from_iterable(self, it)
+#     as  return set(it)    so the result of the set operations is a set
+class SuccDict(Mapping, Set):
+    __slots__ = ["_nbrs"]
+    @classmethod
+    def _from_iterable(self, it):
+        return set(it)   # result of set operations is a builtin set
+    def __init__(self, nbrs):
+        self._nbrs = nbrs
+    def __getitem__(self, node):
+        return self._nbrs[node]
     def __iter__(self):
-        return iter(self._mapping)
-    def __getitem__(self, n):
-        return self._mapping[n]
-    def __contains__(self, node):
-        return node in self._mapping
+        return iter(self._nbrs)
     def __len__(self):
-        return len(self._mapping)
+        return len(self._nbrs)
+    def __repr__(self):
+        return '{0.__class__.__name__}({list(0)})'.format(self)
+# no more methods needed, but these seem reasonable
+    def __contains__(self, node):
+        return node in self._nbrs
+# All rest supplied by Mapping Superclass
+#    def keys(self):
+#        return KeysView(self)
+#    def values(self):
+#        return ValuesView(self)
+#    def data(self):
+#        return ValuesView(self)
+#    def items(self):
+#        return ItemsView(self)
+#    def __eq__(self, other):
+#        return dict(self.items()) == dict(other.items())
+#    def __ne__(self, other):
+#        return not self.__eq__(other)
+#    def get(self, key, default=None):
+#        try:
+#            return self[key]
+#        except KeyError:
+#            return default
 
-    def keys(self):
-        return self._mapping.keys()
-    def data(self):
-        return self._mapping.values() # Not readonly datadict
-    def items(self):
-        return self._mapping.items() # Not readonly datadict
-    def __eq__(self, other):
-        return dict(self.items()) == dict(other.items())
-    def __ne__(self, other):
-        return not self.__eq__(other)
+class PredDict(SuccDict):
+    """Same as SuccDict, just call with self._pred instead of self._succ"""
+    pass
 
-
-class Adjacency(NbrDict):
-    # __slots__= ["_mapping","_cache"]
-    def __init__(self, mapping):
-        self._mapping = mapping
-        self._cache = {}
+class NbrDict(SuccDict):
+    __slots__= ["_snbrs","_pnbrs"]
+    def __init__(self, snbrs, pnbrs):
+        self._snbrs = snbrs
+        self._pnbrs = pnbrs
+    def __getitem__(self, nbr):
+        try:
+            return self._snbrs[nbr]
+        except KeyError:
+            return self._pnbrs[nbr]
     def __iter__(self):
-        for n in self._mapping:
-            if n in self._cache:
-                yield (n, self._cache[n])
-            else:
-                # NbrDicts are read-only so use wrapper for mapping[n]
-                self._cache[n] = nbrdict = NbrDict(self._mapping[n])
-                yield n,nbrdict
+        nbrs_bag = (self._snbrs, self._pnbrs)
+        return (n for nbrs in nbrs_bag for n in nbrs)
+    def __len__(self):
+        return len(self._snbrs) + len(self._pnbrs)
+    def __repr__(self):
+        return '{0.__class__.__name__}({1})'.format(self,list(self))
+# no more methods needed, but these seem reasonable
+    def __contains__(self, nbr):
+        return (nbr in self._snbrs) or (nbr in self._pnbrs)
+
+
+class Adjacency(Mapping):
+    # __slots__= ["_succ", "_pred", "_cache", "_directed"]
+    def __init__(self, succ, pred):
+        self._succ = succ
+        self._pred = pred
+        self._cache = {} # dict of node -> NbrDict
+    def _nbr_object(self, n):
+        return NbrDict(self._succ[n], self._pred[n])
     def __getitem__(self, n):
         if n in self._cache:
             return self._cache[n]
-        if n in self._mapping:
-            # NbrDicts are read-only so use wrapper for mapping[n]
-            self._cache[n] = nbrdict = NbrDict(self._mapping[n])
+        if n in self._succ:
+            self._cache[n] = nbrdict = self._nbr_object(n)
             return nbrdict
         raise KeyError
-    def data(self):
-        # In Python3 we can remove the "set" 
-        for n in set(self._mapping.keys()) - set(self._cache.keys()):
-            # NbrDicts are read-only so use wrapper for mapping[n]
-            self.cache[n] = NbrDict(self.mapping[n])
-        return self._cache.values()
+    def __iter__(self):
+        cache = self._cache
+        for n in self._succ:
+            if n in cache:
+                yield n,cache[n]
+            else:
+                cache[n] = nbrdict = self._nbr_object(n)
+                yield n,nbrdict
+    # user should never need __len__, but Mapping methods do
+    def __len__(self):
+        return len(self._succ)
+    def __repr__(self):
+        return '{0.__class__.__name__}({1})'.format(self,list(self))
+# This really isn't data, its a dict of neighbors
+#    def data(self):
+#        for n in set(self._succ) - set(self._cache):
+#            self._cache[n] = self._nbr_object(n)
+#        return self._cache.values()
     def items(self):
-        for n in set(self._mapping.keys()) - set(self._cache.keys()):
-            self.cache[n] = NbrDict(self.mapping[n])
-        return self._cache.items() # Not readonly datadict
+        for n in set(self._succ) - set(self._cache):
+            self._cache[n] = self._nbr_object(n)
+        return self._cache.items()
 
     def list(self, nodelist=None):
         if nodelist is None:
@@ -96,3 +148,14 @@ class Adjacency(NbrDict):
         M[np.isnan(M)] = nonedge
         M = np.asmatrix(M)
         return M
+
+class Successors(Adjacency):
+    # __slots__= ["_succ", "_pred", "_cache", "_directed"]
+    def __init__(self, succ):
+        self._succ = succ
+        self._cache = {}
+    def _nbr_object(self, n):
+        return SuccDict(self._succ[n])
+class Predecessors(Successors):
+    """Same as Successors, but you pass it self._pred"""
+    pass

@@ -234,7 +234,8 @@ class BaseAttrGraphTester(BaseGraphTester):
         nodes = set(self.K3)
         assert_equal(G.graph, {})
         assert_equal(G.node, {v: {} for v in nodes})
-        assert_equal(G.edge, {u: {v: {} for v in nodes - {u}} for u in nodes})
+        assert_equal(G.succ, self.k3succ)
+        assert_equal(G.pred, self.k3pred)
 
     def test_copy_attr(self):
         G=self.Graph(foo=[])
@@ -259,16 +260,19 @@ class BaseAttrGraphTester(BaseGraphTester):
         assert_equal(G.graph['foo'],H.graph['foo'])
         G.graph['foo'].append(1)
         assert_not_equal(G.graph['foo'],H.graph['foo'])
+        G.graph['foo'].pop()
 
     def deepcopy_node_attr(self,H,G):
         assert_equal(G.node[0]['foo'],H.node[0]['foo'])
         G.node[0]['foo'].append(1)
         assert_not_equal(G.node[0]['foo'],H.node[0]['foo'])
+        G.node[0]['foo'].pop()
 
     def deepcopy_edge_attr(self,H,G):
         assert_equal(G[1][2]['foo'],H[1][2]['foo'])
         G[1][2]['foo'].append(1)
         assert_not_equal(G[1][2]['foo'],H[1][2]['foo'])
+        G[1][2]['foo'].pop()
 
     def is_shallow_copy(self,H,G):
         self.graphs_equal(H,G)
@@ -284,23 +288,26 @@ class BaseAttrGraphTester(BaseGraphTester):
         assert_equal(G.graph['foo'],H.graph['foo'])
         G.graph['foo'].append(1)
         assert_equal(G.graph['foo'],H.graph['foo'])
+        G.graph['foo'].pop()
 
     def shallow_copy_node_attr(self,H,G):
         assert_equal(G.node[0]['foo'],H.node[0]['foo'])
         G.node[0]['foo'].append(1)
         assert_equal(G.node[0]['foo'],H.node[0]['foo'])
+        G.node[0]['foo'].pop()
 
     def shallow_copy_edge_attr(self,H,G):
         assert_equal(G[1][2]['foo'],H[1][2]['foo'])
         G[1][2]['foo'].append(1)
         assert_equal(G[1][2]['foo'],H[1][2]['foo'])
+        G[1][2]['foo'].pop()
 
     def same_attrdict(self, H, G):
         old_foo=H[1][2]['foo']
         H.add_edge(1,2,foo='baz')
-        assert_equal(G.edge,H.edge)
+        assert_equal(G.edge[1][2],H.edge[1][2])
         H.add_edge(1,2,foo=old_foo)
-        assert_equal(G.edge,H.edge)
+        assert_equal(G.edge[1][2],H.edge[1][2])
         old_foo=H.node[0]['foo']
         H.node[0]['foo']='baz'
         assert_equal(G.node,H.node)
@@ -310,9 +317,9 @@ class BaseAttrGraphTester(BaseGraphTester):
     def different_attrdict(self, H, G):
         old_foo=H[1][2]['foo']
         H.add_edge(1,2,foo='baz')
-        assert_not_equal(G.edge,H.edge)
+        assert_not_equal(G.edge[1][2],H.edge[1][2])
         H.add_edge(1,2,foo=old_foo)
-        assert_equal(G.edge,H.edge)
+        assert_equal(G.edge[1][2],H.edge[1][2])
         old_foo=H.node[0]['foo']
         H.node[0]['foo']='baz'
         assert_not_equal(G.node,H.node)
@@ -320,25 +327,42 @@ class BaseAttrGraphTester(BaseGraphTester):
         assert_equal(G.node,H.node)
 
     def graphs_equal(self,H,G):
-        assert_equal(G.adj,H.adj)
-        assert_equal(G.edge,H.edge)
+#        assert_equal(G.adj,H.adj)
+#        assert_equal(G.edge,H.edge)
         assert_equal(G.node,H.node)
         assert_equal(G.graph,H.graph)
         assert_equal(G.name,H.name)
-        if not G.is_directed() and not H.is_directed():
-                assert_true(H.adj[1][2] is H.adj[2][1])
-                assert_true(G.adj[1][2] is G.adj[2][1])
-        else: # at least one is directed
-            if not G.is_directed():
-                G.pred=G.adj
-                G.succ=G.adj
-            if not H.is_directed():
-                H.pred=H.adj
-                H.succ=H.adj
-            assert_equal(G.pred,H.pred)
-            assert_equal(G.succ,H.succ)
-            assert_true(H.succ[1][2] is H.pred[2][1])
-            assert_true(G.succ[1][2] is G.pred[2][1])
+        if G.is_directed() and not H.is_directed():
+            for n,nbrs in G.succ.items():
+                for nbr,d in nbrs.items():
+                    if nbr in H.succ[n]:
+                        assert_true(H.succ[n][nbr]==d)
+                    else:
+                        assert_true(H.pred[n][nbr]==d)
+        elif H.is_directed() and not G.is_directed():
+            for n,nbrs in H.succ.items():
+                for nbr,d in nbrs.items():
+                    if nbr in G.succ[n]:
+                        assert_true(G.succ[n][nbr]==d)
+                    else:
+                        assert_true(G.pred[n][nbr]==d)
+        else:
+            assert_true(G.pred, H.pred)
+            assert_true(G.succ, H.succ)
+#        if not G.is_directed() and not H.is_directed():
+#            assert_true(H.adj[1][2] is G.adj[2][1])
+#            assert_true(G.adj[1][2] is H.adj[2][1])
+#        else: # at least one is directed
+#            if not G.is_directed():
+#                G.pred=G.adj
+#                G.succ=G.adj
+#            if not H.is_directed():
+#                H.pred=H.adj
+#                H.succ=H.adj
+#            assert_equal(G.pred,H.pred)
+#            assert_equal(G.succ,H.succ)
+#            assert_true(H.succ[1][2] is H.pred[2][1])
+#            assert_true(G.succ[1][2] is G.pred[2][1])
 
     def test_graph_attr(self):
         G=self.K3
@@ -426,7 +450,7 @@ class BaseAttrGraphTester(BaseGraphTester):
     def test_to_undirected(self):
         G=self.K3
         self.add_attributes(G)
-        H=networkx.Graph(G)
+        H=self.Graph(G, directed=False)
         self.is_shallow_copy(H,G)
         H=G.to_undirected()
         self.is_deepcopy(H,G)
@@ -434,7 +458,7 @@ class BaseAttrGraphTester(BaseGraphTester):
     def test_to_directed(self):
         G=self.K3
         self.add_attributes(G)
-        H=networkx.DiGraph(G)
+        H=self.Graph(G, directed=True)
         self.is_shallow_copy(H,G)
         H=G.to_directed()
         self.is_deepcopy(H,G)
@@ -471,29 +495,35 @@ class TestGraph(BaseAttrGraphTester):
         self.Graph=nxGraph
         # build dict-of-dict-of-dict K3
         ed1,ed2,ed3 = ({},{},{})
-        self.k3adj={0: {1: ed1, 2: ed2},
-                    1: {0: ed1, 2: ed3},
-                    2: {0: ed2, 1: ed3}}
+        self.k3succ={0: {1: ed1, 2: ed2},
+                     1: {2: ed3},
+                     2: {}}
+        self.k3pred={0: {},
+                     1: {0: ed1},
+                     2: {0: ed2, 1: ed3}}
         self.k3edges=[(0, 1), (0, 2), (1, 2)]
         self.k3nodes=[0, 1, 2]
         self.K3=self.Graph()
-        self.K3.adj=self.K3._adjacency=self.K3.edge=self.k3adj
-        self.K3.node=self.K3._nodedata = {}
+        self.K3.succ = self.K3._succ = self.k3succ
+        self.K3.pred = self.K3._pred = self.k3pred
+        self.K3.adj=self.K3.edge=self.k3succ
+        self.K3.node=self.K3._nodes = {}
         self.K3.node[0]={}
         self.K3.node[1]={}
         self.K3.node[2]={}
-        self.K3.n = Nodes(self.K3._nodedata, self.K3._adjacency)
-        self.K3.e = Edges(self.K3._nodedata, self.K3._adjacency)
-        self.K3.a = Adjacency(self.K3._adjacency)
+        self.K3.directed = False
+        self.K3.n = Nodes(self.K3._nodes, self.K3._succ, self.K3._pred)
+        self.K3.e = Edges(self.K3._nodes, self.K3._succ, self.K3._pred, self.K3.directed)
+        self.K3.a = Adjacency(self.K3._succ, self.K3._pred)
 
 
     def test_data_input(self):
         G=self.Graph(data={1:[2],2:[1]}, name="test")
         assert_equal(G.name,"test")
-        assert_equal(sorted(G.adj.items()),[(1, {2: {}}), (2, {1: {}})])
+        assert_equal(sorted(G.adj.items()),[(1, {2: {}}), (2, {})])
         G=self.Graph({1:[2],2:[1]}, name="test")
         assert_equal(G.name,"test")
-        assert_equal(sorted(G.adj.items()),[(1, {2: {}}), (2, {1: {}})])
+        assert_equal(sorted(G.adj.items()),[(1, {2: {}}), (2, {})])
 
     def test_adjacency(self):
         G=self.K3
@@ -558,7 +588,7 @@ class TestGraph(BaseAttrGraphTester):
     def test_remove_node(self):
         G=self.K3
         G.remove_node(0)
-        assert_equal(G.adj,{1:{2:{}},2:{1:{}}})
+        assert_equal(G.adj,{1:{2:{}},2:{}})
         assert_raises((KeyError,networkx.NetworkXError), G.remove_node,-1)
 
         # generator here to implement list,set,string...
@@ -571,23 +601,24 @@ class TestGraph(BaseAttrGraphTester):
     def test_add_edge(self):
         G=self.Graph()
         G.add_edge(0,1)
-        assert_equal(G.adj,{0: {1: {}}, 1: {0: {}}})
+        assert_equal(G.adj,{0: {1: {}}, 1: {}})
+        assert_equal(G.pred,{0: {}, 1: {0: {}}})
         G=self.Graph()
         G.add_edge(*(0,1))
-        assert_equal(G.adj,{0: {1: {}}, 1: {0: {}}})
+        assert_equal(G.adj,{0: {1: {}}, 1: {}})
+        assert_equal(G.pred,{0: {}, 1: {0: {}}})
 
     def test_add_edges_from(self):
         G=self.Graph()
         G.add_edges_from([(0,1),(0,2,{'weight':3})])
-        assert_equal(G.adj,{0: {1:{}, 2:{'weight':3}}, 1: {0:{}}, \
-                2:{0:{'weight':3}}})
+        assert_equal(G.adj,{0: {1:{}, 2:{'weight':3}}, 1: {}, \
+                2:{}})
         G=self.Graph()
         G.add_edges_from([(0,1),(0,2,{'weight':3}),(1,2,{'data':4})],data=2)
         assert_equal(G.adj,{\
                 0: {1:{'data':2}, 2:{'weight':3,'data':2}}, \
-                1: {0:{'data':2}, 2:{'data':4}}, \
-                2: {0:{'weight':3,'data':2}, 1:{'data':4}} \
-                })
+                1: {2:{'data':4}}, \
+                2: {}})
 
         assert_raises(networkx.NetworkXError,
                       G.add_edges_from,[(0,)])  # too few in tuple
@@ -599,13 +630,13 @@ class TestGraph(BaseAttrGraphTester):
     def test_remove_edge(self):
         G=self.K3
         G.remove_edge(0,1)
-        assert_equal(G.adj,{0:{2:{}},1:{2:{}},2:{0:{},1:{}}})
+        assert_equal(G.adj,{0:{2:{}},1:{2:{}},2:{}})
         assert_raises((KeyError,networkx.NetworkXError), G.remove_edge,-1,0)
 
     def test_remove_edges_from(self):
         G=self.K3
         G.remove_edges_from([(0,1)])
-        assert_equal(G.adj,{0:{2:{}},1:{2:{}},2:{0:{},1:{}}})
+        assert_equal(G.adj,{0:{2:{}},1:{2:{}},2:{}})
         G.remove_edges_from([(0,0)]) # silent fail
 
     def test_clear(self):

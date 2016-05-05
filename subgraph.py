@@ -95,6 +95,13 @@ class SubAdjacency(SubNbrDict):
             if n in self._cache:
                 yield (n, self._cache[n])
             else:
+    # Edge-subgraph would need to check edges
+    # perhaps with allowed_edges(u,v) function.
+    # Then here we put:
+    # allowed_n = [nbr for nbr in self._mapping[n]
+    #              if nbr in self._nodes
+    #              if allowed_edges(n,nbr)]
+    # SubNbrDict(allowed_n, self._mapping[n])
                 # NbrDicts are read-only so use wrapper for mapping[n]
                 self._cache[n] = nd = SubNbrDict(self._nodes, self._mapping[n])
                 yield (n, nd)

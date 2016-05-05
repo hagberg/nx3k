@@ -1,3 +1,13 @@
+#    Copyright (C) 2006-2013 by
+#    Aric Hagberg <hagberg@lanl.gov>
+#    Dan Schult <dschult@colgate.edu>
+#    Pieter Swart <swart@lanl.gov>
+#    All rights reserved.
+#    BSD license.
+#
+# Authors:   Aric Hagberg <aric.hagberg@gmail.com>
+#            Pieter Swart (swart@lanl.gov)
+#            Dan Schult(dschult@colgate.edu)
 """Functions to convert NetworkX graphs to and from other formats.
 
 The preferred way of converting data to a NetworkX graph is through the
@@ -15,21 +25,14 @@ See Also
 --------
 nx_agraph, nx_pydot
 """
-#    Copyright (C) 2006-2013 by
-#    Aric Hagberg <hagberg@lanl.gov>
-#    Dan Schult <dschult@colgate.edu>
-#    Pieter Swart <swart@lanl.gov>
-#    All rights reserved.
-#    BSD license.
 import warnings
 import networkx as nx
-__author__ = """\n""".join(['Aric Hagberg <aric.hagberg@gmail.com>',
-                           'Pieter Swart (swart@lanl.gov)',
-                           'Dan Schult(dschult@colgate.edu)'])
+
 __all__ = ['to_networkx_graph',
            'from_dict_of_dicts', 'to_dict_of_dicts',
            'from_dict_of_lists', 'to_dict_of_lists',
            'from_edgelist', 'to_edgelist']
+
 
 def _prep_create_using(create_using):
     """Return a graph object ready to be populated.
@@ -97,28 +100,19 @@ def to_networkx_graph(data,create_using=None,multigraph_input=False):
     #     except:
     #         raise nx.NetworkXError("Input is not a correct NetworkX graph.")
 
-    if hasattr(data,"_adjacency"):
+    if hasattr(data,"_succ"):
 #        try:
-        result= from_dict_of_dicts(data._adjacency,\
+        result= from_dict_of_dicts(data._succ,\
                 create_using=create_using,\
                 multigraph_input=data.is_multigraph())
         if hasattr(data,'data'): # data.graph should be dict-like
             result.data.update(data.data)
-        if hasattr(data,'_nodedata'): # data.node should be dict-like
-            result._nodedata.update( (n,dd.copy()) for n,dd in data._nodedata.items() )
+        if hasattr(data,'_nodes'): # data.node should be dict-like
+            result._nodes.update( (n,dd.copy()) for n,dd in data._nodes.items() )
         return result
 #    except:
 #        raise nx.NetworkXError("Input is not a correct NetworkX graph.")
 
-    if hasattr(data, "_nodes"):
-        result= from_dict_of_dicts(data.a,\
-                create_using=create_using,\
-                multigraph_input=data.is_multigraph())
-        if hasattr(data,'data'): # data.graph should be dict-like
-            result.data.update(data.data)
-        if hasattr(data,'_nodes'): # data.node should be dict-of-dict-like
-            result._nodes.update( (n,dd.copy()) for n,dd in data.n.items() )
-        return result
 
     # pygraphviz  agraph
     if hasattr(data,"is_strict"):

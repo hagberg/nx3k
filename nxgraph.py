@@ -18,8 +18,9 @@ class nxGraph(Graph):
     def __init__(self, data=None, **attr):
         super(nxGraph, self).__init__(data=data, **attr)
         self.graph = self.data    # dictionary for graph attributes
-        self.node = self._nodedata   # empty node attribute dict
-        self.adj = self._adjacency   # empty adjacency dict
+        self.node = self._nodes   # empty node attribute dict
+        self.adj = self.succ = self._succ   # empty adjacency dict
+        self.pred = self._pred   # empty adjacency dict
         # DEPRECATE
         self.edge = self.adj
 
@@ -61,7 +62,8 @@ class nxGraph(Graph):
 
     # deprecate
     def remove_nodes_from(self,nodes):
-        self.n.difference_update(nodes)
+        for n in nodes:
+            self.n.discard(n)
 
     # deprecate - use G.n, G.n.items(), G.n.data()
     # note that there is no specification in new interface for
@@ -130,7 +132,6 @@ class nxGraph(Graph):
     # singleton degree implementation is ugly here
     def degree(self, nbunch=None, weight=None):
         if nbunch in self:
-            print("here")
             (n,d) = next(self.n.degree(weight=weight))
             return d
         if nbunch is None:
@@ -212,8 +213,8 @@ class nxGraph(Graph):
             for u, nbrs in self.a
             for v, data in nbrs.items()))
         G.graph = deepcopy(self.data)
-        G._nodedata = deepcopy(self._nodedata)
-        G.node = G._nodedata # hack to pass test
+        G._nodes = deepcopy(self._nodes)
+        G.node = G._nodes # hack to pass test
         return G
 
 
@@ -224,20 +225,26 @@ class nxGraph(Graph):
             # create new graph and copy subgraph into it
             H = self.__class__()
             # copy node and attribute dictionaries
-            for n,_ in s.a:
-                H._nodedata[n] = self._nodedata[n]
+            for n,dd in s.n.items():
+                H.n.add(n)
+                H._nodes[n] = dd
+            #for n in s.n:
+            #    H._nodes[n] = self._nodes[n]
             # namespace shortcuts for speed
-            H_adj = H.adj
-            self_adj = s.a
-            # add nodes and edges (undirected method)
-            for n,_ in s.a:
-                Hnbrs = {}
-                H_adj[n] = Hnbrs
-                for nbr, d in self_adj[n].items():
-                    if nbr in H_adj:
-                        # add both representations of edge: n-nbr and nbr-n
-                        Hnbrs[nbr] = d
-                        H_adj[nbr][n] = d
+            for ((u,v),d) in s.e.items():
+                H._succ[u][v] = d
+                H._pred[v][u] = d
+#            H_adj = H.adj
+#            self_adj = s.a
+#            # add nodes and edges (undirected method)
+#            for n in s.n:
+#                Hnbrs = {}
+#                H_adj[n] = Hnbrs
+#                for nbr, d in self_adj[n].items():
+#                    if nbr in H_adj:
+#                        # add both representations of edge: n-nbr and nbr-n
+#                        Hnbrs[nbr] = d
+#                        H_adj[nbr][n] = d
             H.graph = self.data
         else:
             H = s

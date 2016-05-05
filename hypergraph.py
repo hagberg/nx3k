@@ -27,7 +27,7 @@ class Edge(Set):
         return (self._nodes == other._nodes) and \
                (self._edgekey == other._edgekey)
     def __ne__(self, other):
-        return not self._obj == other
+        return not self == other
     @property
     def nodes(self):
         return self._nodes
@@ -38,7 +38,10 @@ class Edge(Set):
 class EdgeData(MutableMapping):
     __slots__ = ["_data"]
     def __init__(self, **kwds):
-        self._data = None
+        if len(kwds) == 0:
+            self._data = None
+        else:
+            self._data = kwds
     def __getitem__(self, key):
         if self._data is None:
             raise KeyError(key)
@@ -73,7 +76,7 @@ class HyperGraph(object):
         if node in self.node_data:
             self.node_data[node].update(kwds)
             return False
-        self.node_data[node] = kwds
+        self.node_data[node] = kwds  # Note: kwds is a copy of the input **dict
         self.node_incidence[node] = set()
         return True
     def add_edge(self, nbunch, **kwds):
@@ -88,14 +91,14 @@ class HyperGraph(object):
             data.update(kwds)
             return False  # existing edge
         # new edge
-        self.edge_data[e]=e.data
+        self.edge_data[e] = e.data
         for n in e:
             if n not in self.node_data:
                 self.node_data[n] = {}
                 self.node_incidence[n] = {e}
             else:
                 self.node_incidence[n].add(e)
-        return True
+        return e
     def remove_edge(self, nbunch):
         if isinstance(nbunch, Edge):
             e = nbunch
@@ -121,12 +124,16 @@ class HyperGraph(object):
                 self.node_incidence[nbr].remove(e)
         del self.node_incidence[node]
     # Reporting Methods
-    def edges(self):
-        return set(self.edge_data.keys())
+    def edges(self, data=None):
+        if data is None:
+            return self.edge_data.keys()
+        if data is True:
+            return self.edge_data.items()
+        return ((e, data(edata)) for e, edata in self.edges_data.items())
     def nodes(self, data=False):
         if data is True:
-            return set(self.node_data.items())
-        return set(self.node_data.keys())
+            return self.node_data.items()
+        return self.node_data.keys()
     def has_edge(self, nbunch):
         if isinstance(nbunch, Edge):
             e = nbunch
@@ -141,8 +148,9 @@ class HyperGraph(object):
             if len(e) == 1:
                 yield node
             else:
-                for n in e - {node}:
-                    yield n
+                for n in e:
+                    if n != node:
+                        yield n
     def __getitem__(self, node):
         return NeighborMap(self, node)
     # extras
@@ -160,8 +168,10 @@ class HyperGraph(object):
         self.graph.clear()
     def copy(self):
         G = self.__class__()
-        G.nodes.update(self.nodes())
-        G.edges.update(self.edges())
+        for n,ndata in self.nodes(data=True):
+            G.add_node(n, **ndata)
+        for e, edata in self.edges(data=True):
+            G.add_edge(e, **edata)
         return G
     def order(self):
         return len(self.node_data)
@@ -183,14 +193,15 @@ class NeighborMap(Mapping):
             if len(e) == 1:
                 yield node
             else:
-                for nbr in e - {node}:
-                    yield nbr
+                for nbr in e:
+                    if nbr != node:
+                        yield nbr
     def __getitem__(self, nbr):
         node = self._node
         graph = self._graph
-        ei = {e:e.data for e in graph.node_incidence[node] if nbr in e}
+        ei = {e: e.data for e in graph.node_incidence[node] if nbr in e}
         if len(ei)==0:
-            raise KeyError(e)
+            raise KeyError(nbr)
         return ei
     def __len__(self):
         return sum(len(e)-1 if len(e)>1 else 1
